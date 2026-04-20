@@ -165,6 +165,48 @@ async function handleApi(request, response, pathname, origin) {
     return true;
   }
 
+  // Image upload — multipart POST
+  if (pathname === "/api/upload/image" && request.method === "POST") {
+    let parts;
+    try {
+      parts = await parseMultipart(request);
+    } catch {
+      sendJson(response, 400, { error: "Invalid upload request." });
+      return true;
+    }
+
+    const filePart = parts.find((p) => p.filename);
+    if (!filePart) {
+      sendJson(response, 400, { error: "No file found in upload." });
+      return true;
+    }
+
+    const originalName = filePart.filename.toLowerCase();
+    if (!originalName.endsWith(".jpg") && !originalName.endsWith(".jpeg")) {
+      sendJson(response, 400, { error: "Only JPG/JPEG images are allowed." });
+      return true;
+    }
+
+    // Check JPEG magic bytes (FF D8 FF)
+    if (filePart.data[0] !== 0xFF || filePart.data[1] !== 0xD8 || filePart.data[2] !== 0xFF) {
+      sendJson(response, 400, { error: "File does not appear to be a valid JPEG image." });
+      return true;
+    }
+
+    // 5MB limit
+    if (filePart.data.length > 5 * 1024 * 1024) {
+      sendJson(response, 400, { error: "Image must be under 5MB." });
+      return true;
+    }
+
+    const savedName = randomUUID().replaceAll("-", "") + ".jpg";
+    const savedPath = path.join(uploadDirectory, savedName);
+    await fs.writeFile(savedPath, filePart.data);
+
+    sendJson(response, 200, { url: "/uploads/" + savedName });
+    return true;
+  }
+
   // All other /api/forms/* routes require authentication
   if (!isAuthenticated(request)) {
     sendJson(response, 401, { error: "Unauthorised. Please sign in to continue." });
@@ -219,47 +261,6 @@ async function handleApi(request, response, pathname, origin) {
     return true;
   }
 
-  // Image upload — multipart POST, auth required
-  if (pathname === "/api/upload/image" && request.method === "POST") {
-    let parts;
-    try {
-      parts = await parseMultipart(request);
-    } catch {
-      sendJson(response, 400, { error: "Invalid upload request." });
-      return true;
-    }
-
-    const filePart = parts.find((p) => p.filename);
-    if (!filePart) {
-      sendJson(response, 400, { error: "No file found in upload." });
-      return true;
-    }
-
-    const originalName = filePart.filename.toLowerCase();
-    if (!originalName.endsWith(".jpg") && !originalName.endsWith(".jpeg")) {
-      sendJson(response, 400, { error: "Only JPG/JPEG images are allowed." });
-      return true;
-    }
-
-    // Check JPEG magic bytes (FF D8 FF)
-    if (filePart.data[0] !== 0xFF || filePart.data[1] !== 0xD8 || filePart.data[2] !== 0xFF) {
-      sendJson(response, 400, { error: "File does not appear to be a valid JPEG image." });
-      return true;
-    }
-
-    // 5MB limit
-    if (filePart.data.length > 5 * 1024 * 1024) {
-      sendJson(response, 400, { error: "Image must be under 5MB." });
-      return true;
-    }
-
-    const savedName = randomUUID().replaceAll("-", "") + ".jpg";
-    const savedPath = path.join(uploadDirectory, savedName);
-    await fs.writeFile(savedPath, filePart.data);
-
-    sendJson(response, 200, { url: "/uploads/" + savedName });
-    return true;
-  }
 
   const deleteMatch = pathname.match(/^\/api\/forms\/(\d+)$/);
   if (deleteMatch && request.method === "DELETE") {

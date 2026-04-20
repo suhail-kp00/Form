@@ -930,3 +930,25 @@ textarea {
 .image-file-input {
   display: none;
 }
+
+input, textarea, select {
+  width: 100%;
+  padding: 14px 16px;
+  box-sizing: border-box;   /* 🔥 FIX */
+}
+
+@media (max-width: 600px) {
+  .public-form-card {
+    padding: 20px;
+  }
+
+  .field input,
+  .field textarea,
+  .field select {
+    font-size: 16px; /* prevent zoom issue */
+  }
+}
+
+button {
+  touch-action: manipulation;
+}

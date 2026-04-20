@@ -300,8 +300,10 @@ refs.questionList.addEventListener("click", (event) => {
 });
 
 refs.formsList.addEventListener("click", async (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLElement)) return;
+  // const target = event.target;
+  // if (!(target instanceof HTMLElement)) return;
+  const target = event.target.closest("[data-action]");
+  if (!target) return;
 
   const action = target.dataset.action;
   const formId = target.dataset.formId;
