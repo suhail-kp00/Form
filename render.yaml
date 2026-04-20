@@ -23,6 +23,8 @@ services:
         sync: false
       - key: SITE_TAGLINE
         sync: false
+      - key: SITE_DESCRIPTION
+        sync: false
       - key: SITE_PHONE
         sync: false
       - key: SITE_EMAIL
