@@ -1,7 +1,7 @@
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createForm, createResponse, getFormById, getFormByPublicId, listForms, listResponses } from "./lib/database.js";
+import { createForm, createResponse, deleteForm, closeForm, reopenForm, getFormById, getFormByPublicId, listForms, listResponses } from "./lib/database.js";
 import { renderDashboardPage, renderLandingPage, renderLoginPage, renderNotFoundPage, renderPublicFormPage } from "./lib/templates.js";
 import {
   buildXlsxBuffer,
@@ -15,6 +15,8 @@ import {
   sendStaticFile
 } from "./lib/utils.js";
 import { isAuthenticated, login, logout } from "./lib/auth.js";
+import fsSync from "node:fs";
+import { randomUUID } from "node:crypto";
 
 // Loads site config. On Render (or any server without a data folder),
 // all values fall back to environment variables — no file needed.
@@ -45,6 +47,64 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const siteConfigPath = path.join(__dirname, "data", "site-config.json");
 const publicDirectory = path.join(__dirname, "public");
+const uploadDirectory = path.join(__dirname, "data", "uploads");
+fsSync.mkdirSync(uploadDirectory, { recursive: true });
+
+// Simple multipart/form-data parser for single file + JSON fields
+async function parseMultipart(request) {
+  return new Promise((resolve, reject) => {
+    const contentType = request.headers["content-type"] || "";
+    const boundaryMatch = contentType.match(/boundary=(.+)$/);
+    if (!boundaryMatch) return reject(new Error("No boundary in multipart request"));
+
+    const boundary = "--" + boundaryMatch[1].trim();
+    const chunks = [];
+
+    request.on("data", (chunk) => chunks.push(chunk));
+    request.on("error", reject);
+    request.on("end", () => {
+      try {
+        const buffer = Buffer.concat(chunks);
+        const parts = [];
+        let start = 0;
+
+        while (start < buffer.length) {
+          const boundaryBuf = Buffer.from(boundary);
+          const idx = buffer.indexOf(boundaryBuf, start);
+          if (idx === -1) break;
+
+          const nextIdx = buffer.indexOf(boundaryBuf, idx + boundaryBuf.length);
+          const partEnd = nextIdx === -1 ? buffer.length : nextIdx;
+          const part = buffer.slice(idx + boundaryBuf.length, partEnd);
+
+          // Split headers from body (double CRLF)
+          const headerEnd = part.indexOf("\r\n\r\n");
+          if (headerEnd === -1) { start = partEnd; continue; }
+
+          const headerStr = part.slice(0, headerEnd).toString("utf8");
+          // body: trim trailing \r\n
+          let body = part.slice(headerEnd + 4);
+          if (body[body.length - 2] === 13 && body[body.length - 1] === 10) {
+            body = body.slice(0, -2);
+          }
+
+          const nameMatch = headerStr.match(/name="([^"]+)"/);
+          const fileMatch = headerStr.match(/filename="([^"]+)"/);
+          if (nameMatch) {
+            parts.push({
+              name: nameMatch[1],
+              filename: fileMatch ? fileMatch[1] : null,
+              data: body,
+              text: !fileMatch ? body.toString("utf8") : null
+            });
+          }
+          start = partEnd;
+        }
+        resolve(parts);
+      } catch (err) { reject(err); }
+    });
+  });
+}
 
 function getOrigin(request) {
   const host = request.headers.host || "localhost:3000";
@@ -78,6 +138,10 @@ async function handleApi(request, response, pathname, origin) {
       sendJson(response, 404, { error: "This form link is no longer available." });
       return true;
     }
+    if (form.closed) {
+      sendJson(response, 403, { error: "This form is no longer accepting responses.", closed: true });
+      return true;
+    }
     sendJson(response, 200, { form });
     return true;
   }
@@ -87,6 +151,10 @@ async function handleApi(request, response, pathname, origin) {
     const form = getFormByPublicId(publicSubmitMatch[1]);
     if (!form) {
       sendJson(response, 404, { error: "This form link is no longer available." });
+      return true;
+    }
+    if (form.closed) {
+      sendJson(response, 403, { error: "This form is no longer accepting responses.", closed: true });
       return true;
     }
     const payload = await readJsonBody(request);
@@ -150,6 +218,84 @@ async function handleApi(request, response, pathname, origin) {
     return true;
   }
 
+  // Image upload — multipart POST, auth required
+  if (pathname === "/api/upload/image" && request.method === "POST") {
+    let parts;
+    try {
+      parts = await parseMultipart(request);
+    } catch {
+      sendJson(response, 400, { error: "Invalid upload request." });
+      return true;
+    }
+
+    const filePart = parts.find((p) => p.filename);
+    if (!filePart) {
+      sendJson(response, 400, { error: "No file found in upload." });
+      return true;
+    }
+
+    const originalName = filePart.filename.toLowerCase();
+    if (!originalName.endsWith(".jpg") && !originalName.endsWith(".jpeg")) {
+      sendJson(response, 400, { error: "Only JPG/JPEG images are allowed." });
+      return true;
+    }
+
+    // Check JPEG magic bytes (FF D8 FF)
+    if (filePart.data[0] !== 0xFF || filePart.data[1] !== 0xD8 || filePart.data[2] !== 0xFF) {
+      sendJson(response, 400, { error: "File does not appear to be a valid JPEG image." });
+      return true;
+    }
+
+    // 5MB limit
+    if (filePart.data.length > 5 * 1024 * 1024) {
+      sendJson(response, 400, { error: "Image must be under 5MB." });
+      return true;
+    }
+
+    const savedName = randomUUID().replaceAll("-", "") + ".jpg";
+    const savedPath = path.join(uploadDirectory, savedName);
+    await fs.writeFile(savedPath, filePart.data);
+
+    sendJson(response, 200, { url: "/uploads/" + savedName });
+    return true;
+  }
+
+  const deleteMatch = pathname.match(/^\/api\/forms\/(\d+)$/);
+  if (deleteMatch && request.method === "DELETE") {
+    const form = getFormById(deleteMatch[1]);
+    if (!form) {
+      sendJson(response, 404, { error: "Form not found." });
+      return true;
+    }
+    deleteForm(form.id);
+    sendJson(response, 200, { success: true });
+    return true;
+  }
+
+  const closeMatch = pathname.match(/^\/api\/forms\/(\d+)\/close$/);
+  if (closeMatch && request.method === "POST") {
+    const form = getFormById(closeMatch[1]);
+    if (!form) {
+      sendJson(response, 404, { error: "Form not found." });
+      return true;
+    }
+    closeForm(form.id);
+    sendJson(response, 200, { success: true });
+    return true;
+  }
+
+  const reopenMatch = pathname.match(/^\/api\/forms\/(\d+)\/reopen$/);
+  if (reopenMatch && request.method === "POST") {
+    const form = getFormById(reopenMatch[1]);
+    if (!form) {
+      sendJson(response, 404, { error: "Form not found." });
+      return true;
+    }
+    reopenForm(form.id);
+    sendJson(response, 200, { success: true });
+    return true;
+  }
+
   return false;
 }
 
@@ -170,6 +316,20 @@ const server = http.createServer(async (request, response) => {
     }
     if (pathname === "/form.js") {
       await sendStaticFile(response, path.join(publicDirectory, "form.js"));
+      return;
+    }
+
+    // Serve uploaded images — public so they display in the form responses
+    if (pathname.startsWith("/uploads/")) {
+      const fileName = path.basename(pathname);
+      const filePath = path.join(uploadDirectory, fileName);
+      try {
+        const content = await fs.readFile(filePath);
+        response.writeHead(200, { "Content-Type": "image/jpeg", "Cache-Control": "public, max-age=86400" });
+        response.end(content);
+      } catch {
+        sendJson(response, 404, { error: "Image not found." });
+      }
       return;
     }
 

@@ -55,6 +55,7 @@ function renderField(question) {
 function collectAnswers(form, questions) {
   const answers = {};
   for (const question of questions) {
+    if (question.type === "image") continue; // handled separately via upload
     if (question.type === "checkboxes") {
       answers[question.id] = [...form.querySelectorAll('input[name="' + question.id + '"]:checked')].map(input => input.value);
       continue;
@@ -73,7 +74,16 @@ function showSuccessScreen(formTitle) {
 async function loadForm() {
   mount.innerHTML = '<p class="empty-state">Loading form...</p>';
   try {
-    const data = await apiFetch("/api/public/forms/" + publicId);
+    let data;
+    try {
+      data = await apiFetch("/api/public/forms/" + publicId);
+    } catch (err) {
+      if (err.message && err.message.includes("no longer accepting")) {
+        mount.innerHTML = '<div class="form-closed-screen"><div class="closed-icon">&#128274;</div><h2>This form is now closed</h2><p>The form is no longer accepting new responses. If you think this is a mistake, please contact the organiser.</p></div>';
+        return;
+      }
+      throw err;
+    }
     const { form } = data;
     const questionsHtml = form.questions.map(question => '<div class="public-question">' + renderField(question) + '</div>').join("");
     mount.innerHTML = '<div class="public-form-intro"><p class="eyebrow">Shareable form</p><h2>' + form.title + '</h2><p>' + (form.description || "Please complete all required details below.") + '</p></div><form id="publicForm" class="public-form-fields">' + questionsHtml + '<div class="builder-actions"><p class="status-text" id="publicFormStatus">Fields marked with * are required.</p><button class="button button-primary" type="submit">Submit Form</button></div></form>';
@@ -81,12 +91,66 @@ async function loadForm() {
     const formElement = document.getElementById("publicForm");
     const status = document.getElementById("publicFormStatus");
 
+    // Wire up image preview and clear buttons
+    formElement.querySelectorAll(".image-file-input").forEach(function(input) {
+      var qid = input.name;
+      input.addEventListener("change", function() {
+        var file = input.files[0];
+        var preview = document.getElementById("imgPreview_" + qid);
+        var thumb = document.getElementById("imgThumb_" + qid);
+        var hint = input.closest(".image-upload-area").querySelector(".image-upload-hint");
+        if (file) {
+          var reader = new FileReader();
+          reader.onload = function(e) {
+            thumb.src = e.target.result;
+            preview.classList.remove("hidden");
+            hint.classList.add("hidden");
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    });
+
+    formElement.querySelectorAll(".image-clear-btn").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        var qid = btn.dataset.target;
+        var input = document.getElementById("imgInput_" + qid);
+        var preview = document.getElementById("imgPreview_" + qid);
+        var hint = input.closest(".image-upload-area").querySelector(".image-upload-hint");
+        input.value = "";
+        preview.classList.add("hidden");
+        hint.classList.remove("hidden");
+      });
+    });
+
     formElement.addEventListener("submit", async (event) => {
       event.preventDefault();
       status.textContent = "Submitting your details...";
       status.dataset.tone = "loading";
       try {
         const answers = collectAnswers(formElement, form.questions);
+
+        // Upload any image fields first
+        for (const question of form.questions) {
+          if (question.type !== "image") continue;
+          var fileInput = formElement.querySelector('[name="' + question.id + '"]');
+          if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+            if (question.required) throw new Error('"' + question.label + '" is required.');
+            answers[question.id] = "";
+            continue;
+          }
+          var file = fileInput.files[0];
+          if (!file.name.toLowerCase().match(/\.jpe?g$/)) throw new Error('"' + question.label + '" must be a JPG/JPEG image.');
+          if (file.size > 5 * 1024 * 1024) throw new Error('"' + question.label + '" image must be under 5MB.');
+          status.textContent = "Uploading image...";
+          var formData = new FormData();
+          formData.append("file", file);
+          var uploadRes = await fetch("/api/upload/image", { method: "POST", body: formData });
+          var uploadData = await uploadRes.json();
+          if (!uploadRes.ok) throw new Error(uploadData.error || "Image upload failed.");
+          answers[question.id] = uploadData.url;
+        }
+
         await apiFetch("/api/public/forms/" + publicId + "/responses", {
           method: "POST",
           body: JSON.stringify({ answers })

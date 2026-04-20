@@ -27,7 +27,8 @@ const typeLabels = {
   dropdown: "Dropdown",
   date: "Date",
   number: "Number",
-  email: "Email"
+  email: "Email",
+  image: "Image upload (JPG)"
 };
 
 function scrollToSection(targetId) {
@@ -154,11 +155,14 @@ function renderFormsList() {
 
   refs.formsList.innerHTML = state.forms.map((form) => {
     const isActive = Number(form.id) === Number(state.selectedFormId);
+    const closedBadge = form.closed ? '<span class="form-closed-badge">Closed</span>' : '<span class="form-open-badge">Open</span>';
+    const toggleLabel = form.closed ? "Reopen Form" : "Stop Responses";
+    const toggleAction = form.closed ? "reopen" : "close";
     return `
-      <article class="form-card ${isActive ? "active" : ""}">
+      <article class="form-card ${isActive ? "active" : ""} ${form.closed ? "form-card-closed" : ""}">
         <div class="form-card-top">
           <div>
-            <h4>${form.title}</h4>
+            <h4>${form.title} ${closedBadge}</h4>
             <p>${form.responseCount} responses</p>
           </div>
           <button type="button" class="inline-button" data-action="view" data-form-id="${form.id}">View</button>
@@ -167,6 +171,10 @@ function renderFormsList() {
           <button type="button" class="inline-button" data-action="copy" data-form-id="${form.id}">Copy Link</button>
           <a class="inline-button" href="${form.shareLink}" target="_blank" rel="noreferrer">Open Form</a>
           <a class="inline-button" href="/api/forms/${form.id}/export.xlsx">Download Excel</a>
+        </div>
+        <div class="form-actions" style="margin-top:8px;border-top:1px solid rgba(33,29,24,0.08);padding-top:10px;">
+          <button type="button" class="inline-button ${form.closed ? "" : "warning"}" data-action="${toggleAction}" data-form-id="${form.id}">${toggleLabel}</button>
+          <button type="button" class="inline-button danger" data-action="delete" data-form-id="${form.id}" data-form-title="${form.title}">Delete</button>
         </div>
       </article>
     `;
@@ -222,7 +230,7 @@ function renderResponses(bundle) {
           ${table.rows.map((row) => `
             <tr>
               <td>${row.submittedAtLabel}</td>
-              ${form.questions.map((question) => `<td>${row.cells[question.id] || "-"}</td>`).join("")}
+              ${form.questions.map((question) => { const val = row.cells[question.id] || ""; return question.type === "image" && val ? `<td><a href="${val}" target="_blank" rel="noreferrer"><img src="${val}" style="height:48px;width:48px;object-fit:cover;border-radius:6px;border:1px solid rgba(33,29,24,0.12);" alt="photo" /></a></td>` : `<td>${val || "-"}</td>`; }).join("")}
             </tr>
           `).join("")}
         </tbody>
@@ -309,6 +317,45 @@ refs.formsList.addEventListener("click", async (event) => {
       await navigator.clipboard.writeText(form.shareLink);
       target.textContent = "Copied";
       window.setTimeout(() => { target.textContent = "Copy Link"; }, 1500);
+    }
+  }
+
+  if (action === "delete") {
+    const formTitle = target.dataset.formTitle || "this form";
+    const confirmed = window.confirm(`Delete "${formTitle}"?\n\nThis will permanently delete the form and ALL student responses. This cannot be undone.`);
+    if (!confirmed) return;
+    try {
+      await apiFetch(`/api/forms/${formId}`, { method: "DELETE" });
+      if (Number(state.selectedFormId) === Number(formId)) {
+        state.selectedFormId = null;
+        renderResponses(null);
+      }
+      await loadForms();
+      setBuilderStatus("Form deleted successfully.", "success");
+    } catch (error) {
+      setBuilderStatus(error.message, "error");
+    }
+  }
+
+  if (action === "close") {
+    const confirmed = window.confirm("Stop accepting responses for this form?\n\nStudents who visit the form link will see a message that the form is closed. You can reopen it anytime.");
+    if (!confirmed) return;
+    try {
+      await apiFetch(`/api/forms/${formId}/close`, { method: "POST" });
+      await loadForms(state.selectedFormId);
+      setBuilderStatus("Form closed. No new responses will be accepted.", "success");
+    } catch (error) {
+      setBuilderStatus(error.message, "error");
+    }
+  }
+
+  if (action === "reopen") {
+    try {
+      await apiFetch(`/api/forms/${formId}/reopen`, { method: "POST" });
+      await loadForms(state.selectedFormId);
+      setBuilderStatus("Form reopened. Students can now submit responses.", "success");
+    } catch (error) {
+      setBuilderStatus(error.message, "error");
     }
   }
 });
