@@ -691,3 +691,95 @@ textarea {
   margin: 0;
 }
 
+/* ---- Stat cards fix ---- */
+.stat-card {
+  padding: 24px;
+  overflow: hidden;
+}
+
+.stat-card p {
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-card strong {
+  font-size: clamp(1.2rem, 2.5vw, 2rem);
+  word-break: break-word;
+  white-space: normal;
+  display: block;
+  line-height: 1.2;
+  margin-top: 4px;
+}
+
+/* ---- Responses panel layout fix ---- */
+.forms-grid {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.responses-column {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.responses-summary {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.responses-table-wrap {
+  min-height: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.responses-table {
+  width: 100%;
+  min-width: 0;
+}
+
+/* ---- Success submit screen ---- */
+.submit-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.success-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1e6a45, #2ecc71);
+  color: white;
+  font-size: 2.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 28px rgba(30, 106, 69, 0.28);
+}
+
+.submit-success h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: #1e6a45;
+}
+
+.submit-success p {
+  color: var(--muted);
+  margin: 0;
+  max-width: 400px;
+  line-height: 1.6;
+}
+

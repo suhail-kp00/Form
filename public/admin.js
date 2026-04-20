@@ -32,7 +32,6 @@ const typeLabels = {
 
 function scrollToSection(targetId) {
   const section = document.getElementById(targetId);
-
   if (section) {
     section.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -46,13 +45,10 @@ async function apiFetch(url, options = {}) {
       ...(options.headers ?? {})
     }
   });
-
   const data = await response.json();
-
   if (!response.ok) {
     throw new Error(data.error || "Request failed.");
   }
-
   return data;
 }
 
@@ -75,42 +71,25 @@ function createQuestionCard(question = {}) {
       <strong class="question-number">Question</strong>
       <button type="button" class="inline-button danger" data-action="remove-question">Remove</button>
     </div>
-
     <label class="field">
       <span>Question</span>
-      <input
-        type="text"
-        class="question-label"
-        value="${question.label || ""}"
-        placeholder="Student full name"
-        required
-      />
+      <input type="text" class="question-label" value="${question.label || ""}" placeholder="Student full name" required />
     </label>
-
     <div class="question-card-grid">
       <label class="field">
         <span>Question type</span>
         <select class="question-type">
-          ${Object.entries(typeLabels)
-            .map(
-              ([value, label]) =>
-                `<option value="${value}" ${value === selectedType ? "selected" : ""}>${label}</option>`
-            )
-            .join("")}
+          ${Object.entries(typeLabels).map(([value, label]) => `<option value="${value}" ${value === selectedType ? "selected" : ""}>${label}</option>`).join("")}
         </select>
       </label>
-
       <label class="toggle-field">
         <input type="checkbox" class="question-required" ${question.required ? "checked" : ""} />
         <span>Mark as important</span>
       </label>
     </div>
-
     <label class="field options-field ${usesOptions ? "" : "hidden"}">
       <span>Options</span>
-      <textarea class="question-options" rows="4" placeholder="One option per line">${
-        Array.isArray(question.options) ? question.options.join("\n") : ""
-      }</textarea>
+      <textarea class="question-options" rows="4" placeholder="One option per line">${Array.isArray(question.options) ? question.options.join("\n") : ""}</textarea>
     </label>
   `;
 
@@ -127,7 +106,6 @@ function createQuestionCard(question = {}) {
 
 function refreshQuestionNumbers() {
   const cards = refs.questionList.querySelectorAll(".question-card");
-
   cards.forEach((card, index) => {
     const number = card.querySelector(".question-number");
     number.textContent = `Question ${index + 1}`;
@@ -142,16 +120,12 @@ function addQuestion(question) {
 function collectQuestions() {
   return [...refs.questionList.querySelectorAll(".question-card")].map((card) => {
     const optionsText = card.querySelector(".question-options")?.value || "";
-
     return {
       id: card.dataset.questionId,
       label: card.querySelector(".question-label").value.trim(),
       type: card.querySelector(".question-type").value,
       required: card.querySelector(".question-required").checked,
-      options: optionsText
-        .split("\n")
-        .map((entry) => entry.trim())
-        .filter(Boolean)
+      options: optionsText.split("\n").map((entry) => entry.trim()).filter(Boolean)
     };
   });
 }
@@ -159,11 +133,7 @@ function collectQuestions() {
 function resetBuilder() {
   refs.builderForm.reset();
   refs.questionList.innerHTML = "";
-  addQuestion({
-    label: "Student full name",
-    type: "short_text",
-    required: true
-  });
+  addQuestion({ label: "Student full name", type: "short_text", required: true });
   setBuilderStatus("Add your questions and create the form.", "neutral");
 }
 
@@ -171,7 +141,6 @@ function updateStats() {
   const totalForms = state.forms.length;
   const totalResponses = state.forms.reduce((sum, form) => sum + Number(form.responseCount || 0), 0);
   const latestForm = state.forms[0]?.title || "No forms yet";
-
   refs.totalFormsStat.textContent = String(totalForms);
   refs.totalResponsesStat.textContent = String(totalResponses);
   refs.latestFormStat.textContent = latestForm;
@@ -183,37 +152,25 @@ function renderFormsList() {
     return;
   }
 
-  refs.formsList.innerHTML = state.forms
-    .map((form) => {
-      const isActive = Number(form.id) === Number(state.selectedFormId);
-
-      return `
-        <article class="form-card ${isActive ? "active" : ""}">
-          <div class="form-card-top">
-            <div>
-              <h4>${form.title}</h4>
-              <p>${form.responseCount} responses</p>
-            </div>
-            <button type="button" class="inline-button" data-action="view" data-form-id="${form.id}">
-              View
-            </button>
+  refs.formsList.innerHTML = state.forms.map((form) => {
+    const isActive = Number(form.id) === Number(state.selectedFormId);
+    return `
+      <article class="form-card ${isActive ? "active" : ""}">
+        <div class="form-card-top">
+          <div>
+            <h4>${form.title}</h4>
+            <p>${form.responseCount} responses</p>
           </div>
-
-          <div class="form-actions">
-            <button type="button" class="inline-button" data-action="copy" data-form-id="${form.id}">
-              Copy Link
-            </button>
-            <a class="inline-button" href="${form.shareLink}" target="_blank" rel="noreferrer">
-              Open Form
-            </a>
-            <a class="inline-button" href="/api/forms/${form.id}/export.xls">
-              Download Excel
-            </a>
-          </div>
-        </article>
-      `;
-    })
-    .join("");
+          <button type="button" class="inline-button" data-action="view" data-form-id="${form.id}">View</button>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="inline-button" data-action="copy" data-form-id="${form.id}">Copy Link</button>
+          <a class="inline-button" href="${form.shareLink}" target="_blank" rel="noreferrer">Open Form</a>
+          <a class="inline-button" href="/api/forms/${form.id}/export.xls">Download Excel</a>
+        </div>
+      </article>
+    `;
+  }).join("");
 }
 
 function renderResponses(bundle) {
@@ -247,9 +204,7 @@ function renderResponses(bundle) {
   copyButton.addEventListener("click", async () => {
     await navigator.clipboard.writeText(form.shareLink);
     copyButton.textContent = "Link Copied";
-    window.setTimeout(() => {
-      copyButton.textContent = "Copy Public Link";
-    }, 1500);
+    window.setTimeout(() => { copyButton.textContent = "Copy Public Link"; }, 1500);
   });
 
   if (!table.rows.length) {
@@ -261,23 +216,15 @@ function renderResponses(bundle) {
     <div class="table-scroll">
       <table class="responses-table">
         <thead>
-          <tr>
-            ${table.columns.map((column) => `<th>${column.label}</th>`).join("")}
-          </tr>
+          <tr>${table.columns.map((column) => `<th>${column.label}</th>`).join("")}</tr>
         </thead>
         <tbody>
-          ${table.rows
-            .map(
-              (row) => `
-                <tr>
-                  <td>${row.submittedAtLabel}</td>
-                  ${form.questions
-                    .map((question) => `<td>${row.cells[question.id] || "-"}</td>`)
-                    .join("")}
-                </tr>
-              `
-            )
-            .join("")}
+          ${table.rows.map((row) => `
+            <tr>
+              <td>${row.submittedAtLabel}</td>
+              ${form.questions.map((question) => `<td>${row.cells[question.id] || "-"}</td>`).join("")}
+            </tr>
+          `).join("")}
         </tbody>
       </table>
     </div>
@@ -295,12 +242,19 @@ async function loadForms(selectedId = state.selectedFormId) {
   }
 }
 
+// FIXED: refreshes forms list (and response count) at the same time as loading responses
 async function loadResponses(formId) {
   state.selectedFormId = Number(formId);
-  renderFormsList();
 
-  const data = await apiFetch(`/api/forms/${formId}/responses`);
-  renderResponses(data);
+  const [formsData, responsesData] = await Promise.all([
+    apiFetch("/api/forms"),
+    apiFetch(`/api/forms/${formId}/responses`)
+  ]);
+
+  state.forms = formsData.forms;
+  renderFormsList();
+  updateStats();
+  renderResponses(responsesData);
 }
 
 async function handleBuilderSubmit(event) {
@@ -314,10 +268,7 @@ async function handleBuilderSubmit(event) {
       questions: collectQuestions()
     };
 
-    const data = await apiFetch("/api/forms", {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
+    const data = await apiFetch("/api/forms", { method: "POST", body: JSON.stringify(payload) });
 
     await loadForms(data.form.id);
     resetBuilder();
@@ -329,16 +280,11 @@ async function handleBuilderSubmit(event) {
 }
 
 refs.addQuestionButton.addEventListener("click", () => {
-  addQuestion({
-    label: "",
-    type: "short_text",
-    required: false
-  });
+  addQuestion({ label: "", type: "short_text", required: false });
 });
 
 refs.questionList.addEventListener("click", (event) => {
   const action = event.target.dataset.action;
-
   if (action === "remove-question") {
     event.target.closest(".question-card").remove();
     refreshQuestionNumbers();
@@ -347,17 +293,11 @@ refs.questionList.addEventListener("click", (event) => {
 
 refs.formsList.addEventListener("click", async (event) => {
   const target = event.target;
-
-  if (!(target instanceof HTMLElement)) {
-    return;
-  }
+  if (!(target instanceof HTMLElement)) return;
 
   const action = target.dataset.action;
   const formId = target.dataset.formId;
-
-  if (!action || !formId) {
-    return;
-  }
+  if (!action || !formId) return;
 
   if (action === "view") {
     await loadResponses(formId);
@@ -365,20 +305,19 @@ refs.formsList.addEventListener("click", async (event) => {
 
   if (action === "copy") {
     const form = state.forms.find((item) => Number(item.id) === Number(formId));
-
     if (form) {
       await navigator.clipboard.writeText(form.shareLink);
       target.textContent = "Copied";
-      window.setTimeout(() => {
-        target.textContent = "Copy Link";
-      }, 1500);
+      window.setTimeout(() => { target.textContent = "Copy Link"; }, 1500);
     }
   }
 });
 
 document.querySelectorAll(".sidebar-link").forEach((button) => {
   button.addEventListener("click", () => {
-    scrollToSection(button.dataset.section);
+    if (button.dataset.section) {
+      scrollToSection(button.dataset.section);
+    }
   });
 });
 
