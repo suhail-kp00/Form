@@ -48,15 +48,7 @@ function renderField(question) {
     const opts = question.options.map(option => '<option value="' + option + '">' + option + '</option>').join("");
     return '<label class="field"><span>' + question.label + ' ' + requiredMark + '</span><select name="' + question.id + '" ' + (question.required ? "required" : "") + '><option value="">Select an option</option>' + opts + '</select></label>';
   }
-
-  return '<label class="field"><span>' + question.label + ' ' + requiredMark + '</span><input type="' + (question.type === "short_text" ? "text" : question.type) + '" name="' + question.id + '" ' + (question.required ? "required" : "") + ' /><small class="field-help">' + typeHelp[question.type] + '</small></label>';
-}
-
-function collectAnswers(form, questions) {
-  const answers = {};
-  for (const question of questions) {
-    // if (question.type === "image") continue; // handled separately via upload
-    if (question.type === "image") {
+  if (question.type === "image") {
       return `
         <div class="field image-upload-area">
           <span>${question.label} ${requiredMark}</span>
@@ -83,6 +75,14 @@ function collectAnswers(form, questions) {
         </div>
       `;
     }
+
+  return '<label class="field"><span>' + question.label + ' ' + requiredMark + '</span><input type="' + (question.type === "short_text" ? "text" : question.type) + '" name="' + question.id + '" ' + (question.required ? "required" : "") + ' /><small class="field-help">' + typeHelp[question.type] + '</small></label>';
+}
+
+function collectAnswers(form, questions) {
+  const answers = {};
+  for (const question of questions) {
+    if (question.type === "image") continue; // handled separately via upload
     if (question.type === "checkboxes") {
       answers[question.id] = [...form.querySelectorAll('input[name="' + question.id + '"]:checked')].map(input => input.value);
       continue;
