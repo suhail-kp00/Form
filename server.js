@@ -16,6 +16,31 @@ import {
 } from "./lib/utils.js";
 import { isAuthenticated, login, logout } from "./lib/auth.js";
 
+// Loads site config. On Render (or any server without a data folder),
+// all values fall back to environment variables — no file needed.
+async function loadSiteConfig(configPath) {
+  let file = {};
+  try {
+    file = await readSiteConfig(configPath);
+  } catch {
+    // file missing — fine, use env vars below
+  }
+  return {
+    businessName:  process.env.SITE_BUSINESS_NAME  || file.businessName  || "Finix Printing",
+    tagline:       process.env.SITE_TAGLINE         || file.tagline        || "",
+    description:   process.env.SITE_DESCRIPTION     || file.description    || "",
+    bookingNote:   process.env.SITE_BOOKING_NOTE     || file.bookingNote    || "",
+    phone:         process.env.SITE_PHONE            || file.phone          || "",
+    email:         process.env.SITE_EMAIL            || file.email          || "",
+    address:       process.env.SITE_ADDRESS          || file.address        || "",
+    whatsappUrl:   process.env.SITE_WHATSAPP_URL     || file.whatsappUrl    || "#",
+    instagramUrl:  process.env.SITE_INSTAGRAM_URL    || file.instagramUrl   || "#",
+    facebookUrl:   process.env.SITE_FACEBOOK_URL     || file.facebookUrl    || "#",
+    adminUsername: process.env.ADMIN_USERNAME        || file.adminUsername  || "admin",
+    adminPassword: process.env.ADMIN_PASSWORD        || file.adminPassword  || "changeme"
+  };
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const siteConfigPath = path.join(__dirname, "data", "site-config.json");
@@ -148,7 +173,7 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
-    const site = await readSiteConfig(siteConfigPath);
+    const site = await loadSiteConfig(siteConfigPath);
 
     // ---- Login page (GET) ----
     if (pathname === "/login" && request.method === "GET") {

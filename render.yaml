@@ -1,11 +1,39 @@
 services:
   - type: web
     name: form_collector
-    runtime: node
-    buildCommand: npm install
-    startCommand: node server.js
+    runtime: docker
+    disk:
+      name: data
+      mountPath: /app/data
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3000
+        value: 10000
+      - key: DATABASE_FILE
+        value: /app/data/finix-printing.sqlite
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: SITE_BUSINESS_NAME
+        sync: false
+      - key: SITE_TAGLINE
+        sync: false
+      - key: SITE_PHONE
+        sync: false
+      - key: SITE_EMAIL
+        sync: false
+      - key: SITE_ADDRESS
+        sync: false
+      - key: SITE_BOOKING_NOTE
+        sync: false
+      - key: SITE_WHATSAPP_URL
+        sync: false
+      - key: SITE_INSTAGRAM_URL
+        sync: false
+      - key: SITE_FACEBOOK_URL
+        sync: false

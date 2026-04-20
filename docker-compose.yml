@@ -8,4 +8,9 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
+      - ADMIN_USERNAME=Ashraf
+      - ADMIN_PASSWORD=Ashraf@finix.0280
+      - SESSION_SECRET=finix-super-secret-key-change-this
+    volumes:
+      - ./data:/app/data
     restart: unless-stopped
