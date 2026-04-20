@@ -51,7 +51,11 @@ function renderField(question) {
   if (question.type === "image") {
       return `
         <div class="field image-upload-area">
-          <span>${question.label} ${requiredMark}</span>
+        <span>${question.label} ${requiredMark}</span>
+
+        <label for="imgInput_${question.id}" class="image-drop-zone">
+          <p>Choose a JPG image (Max 5MB)</p>
+        </label>
 
           <input 
             type="file" 
@@ -61,10 +65,6 @@ function renderField(question) {
             accept="image/jpeg,image/jpg"
             ${question.required ? "required" : ""}
           />
-
-          <div class="image-upload-hint">
-            Choose a JPG image (Max 5MB)
-          </div>
 
           <div id="imgPreview_${question.id}" class="image-preview hidden">
             <img id="imgThumb_${question.id}" />

@@ -904,5 +904,29 @@ textarea {
   border: 1px solid var(--line);
 }
 
+.image-preview {
+  margin-top: 12px;
+  display: block;
+}
 
+.image-preview img {
+  width: 100%;
+  max-height: 250px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
 
+.image-drop-zone {
+  display: block;
+  padding: 30px;
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  background: rgba(255,255,255,0.6);
+}
+
+.image-file-input {
+  display: none;
+}
