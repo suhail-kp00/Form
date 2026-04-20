@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { createForm, createResponse, getFormById, getFormByPublicId, listForms, listResponses } from "./lib/database.js";
 import { renderDashboardPage, renderLandingPage, renderLoginPage, renderNotFoundPage, renderPublicFormPage } from "./lib/templates.js";
 import {
-  buildCsvExport,
+  buildXlsxBuffer,
   buildResponseTable,
   normalizeAnswers,
   readJsonBody,
@@ -107,17 +107,17 @@ async function handleApi(request, response, pathname, origin) {
     return true;
   }
 
-  const exportMatch = pathname.match(/^\/api\/forms\/(\d+)\/export\.xls$/);
+  const exportMatch = pathname.match(/^\/api\/forms\/(\d+)\/export\.xlsx$/);
   if (exportMatch && request.method === "GET") {
     const form = getFormById(exportMatch[1]);
     if (!form) {
       sendJson(response, 404, { error: "Form not found." });
       return true;
     }
-    const workbook = buildCsvExport(form, listResponses(form.id));
-    const fileName = `${form.title.replace(/[^\w-]+/g, "-").toLowerCase() || "responses"}-responses.csv`;
+    const workbook = buildXlsxBuffer(form, listResponses(form.id));
+    const fileName = `${form.title.replace(/[^\w-]+/g, "-").toLowerCase() || "responses"}-responses.xlsx`;
     response.writeHead(200, {
-      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "Content-Disposition": `attachment; filename="${fileName}"`,
       "Cache-Control": "no-store"
     });
