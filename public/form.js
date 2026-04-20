@@ -55,7 +55,34 @@ function renderField(question) {
 function collectAnswers(form, questions) {
   const answers = {};
   for (const question of questions) {
-    if (question.type === "image") continue; // handled separately via upload
+    // if (question.type === "image") continue; // handled separately via upload
+    if (question.type === "image") {
+      return `
+        <div class="field image-upload-area">
+          <span>${question.label} ${requiredMark}</span>
+
+          <input 
+            type="file" 
+            name="${question.id}" 
+            id="imgInput_${question.id}"
+            class="image-file-input"
+            accept="image/jpeg,image/jpg"
+            ${question.required ? "required" : ""}
+          />
+
+          <div class="image-upload-hint">
+            Choose a JPG image (Max 5MB)
+          </div>
+
+          <div id="imgPreview_${question.id}" class="image-preview hidden">
+            <img id="imgThumb_${question.id}" />
+            <button type="button" class="image-clear-btn" data-target="${question.id}">
+              Remove
+            </button>
+          </div>
+        </div>
+      `;
+    }
     if (question.type === "checkboxes") {
       answers[question.id] = [...form.querySelectorAll('input[name="' + question.id + '"]:checked')].map(input => input.value);
       continue;
