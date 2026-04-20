@@ -15,6 +15,7 @@ import {
   sendStaticFile
 } from "./lib/utils.js";
 import { isAuthenticated, login, logout } from "./lib/auth.js";
+import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import { randomUUID } from "node:crypto";
 
