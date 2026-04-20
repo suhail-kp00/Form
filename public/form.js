@@ -138,16 +138,17 @@ async function loadForm() {
       });
     });
 
-    formElement.querySelectorAll(".image-clear-btn").forEach(function(btn) {
-      btn.addEventListener("click", function() {
-        var qid = btn.dataset.target;
-        var input = document.getElementById("imgInput_" + qid);
-        var preview = document.getElementById("imgPreview_" + qid);
-        var hint = input.closest(".image-upload-area").querySelector(".image-upload-hint");
-        input.value = "";
-        preview.classList.add("hidden");
-        hint.classList.remove("hidden");
-      });
+    formElement.addEventListener("click", function(e) {
+      if (!e.target.classList.contains("image-clear-btn")) return;
+
+      const qid = e.target.dataset.target;
+      const input = document.getElementById("imgInput_" + qid);
+      const preview = document.getElementById("imgPreview_" + qid);
+      const hint = input.closest(".image-upload-area").querySelector(".image-upload-hint");
+
+      input.value = "";
+      preview.classList.add("hidden");
+      hint.classList.remove("hidden");
     });
 
     formElement.addEventListener("submit", async (event) => {
