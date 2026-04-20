@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { createForm, createResponse, getFormById, getFormByPublicId, listForms, listResponses } from "./lib/database.js";
 import { renderDashboardPage, renderLandingPage, renderLoginPage, renderNotFoundPage, renderPublicFormPage } from "./lib/templates.js";
 import {
-  buildExcelWorkbookXml,
+  buildCsvExport,
   buildResponseTable,
   normalizeAnswers,
   readJsonBody,
@@ -114,10 +114,10 @@ async function handleApi(request, response, pathname, origin) {
       sendJson(response, 404, { error: "Form not found." });
       return true;
     }
-    const workbook = buildExcelWorkbookXml(form, listResponses(form.id));
-    const fileName = `${form.title.replace(/[^\w-]+/g, "-").toLowerCase() || "responses"}-responses.xls`;
+    const workbook = buildCsvExport(form, listResponses(form.id));
+    const fileName = `${form.title.replace(/[^\w-]+/g, "-").toLowerCase() || "responses"}-responses.csv`;
     response.writeHead(200, {
-      "Content-Type": "application/vnd.ms-excel; charset=utf-8",
+      "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${fileName}"`,
       "Cache-Control": "no-store"
     });

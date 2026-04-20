@@ -166,7 +166,7 @@ function renderFormsList() {
         <div class="form-actions">
           <button type="button" class="inline-button" data-action="copy" data-form-id="${form.id}">Copy Link</button>
           <a class="inline-button" href="${form.shareLink}" target="_blank" rel="noreferrer">Open Form</a>
-          <a class="inline-button" href="/api/forms/${form.id}/export.xls">Download Excel</a>
+          <a class="inline-button" href="/api/forms/${form.id}/export.csv">Download Excel</a>
         </div>
       </article>
     `;
@@ -193,7 +193,7 @@ function renderResponses(bundle) {
       </div>
       <div class="summary-actions">
         <button type="button" class="button button-secondary" id="copySelectedLink">Copy Public Link</button>
-        <a class="button button-primary" href="/api/forms/${form.id}/export.xls">Download Excel</a>
+        <a class="button button-primary" href="/api/forms/${form.id}/export.csv">Download Excel</a>
       </div>
     </div>
     <div class="link-pill">${form.shareLink}</div>
