@@ -1,0 +1,6 @@
+data/forms.db
+data/finix-printing.sqlite
+data/smoke-test.sqlite
+node_modules
+server.log
+server.err
