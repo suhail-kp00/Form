@@ -952,3 +952,97 @@ input, textarea, select {
 button {
   touch-action: manipulation;
 }
+
+/* ---- Bot Form Chat UI ---- */
+.public-bot-shell {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  height: 90vh;
+}
+.public-bot-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.public-bot-header .brand-mark {
+  width: 40px;
+  height: 40px;
+  font-size: 0.9rem;
+}
+.public-bot-card {
+  flex: 1;
+  background: var(--card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.chat-messages {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.chat-bubble {
+  max-width: 80%;
+  padding: 14px 18px;
+  border-radius: 20px;
+  line-height: 1.5;
+  animation: fadeIn 0.3s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.bot-bubble {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--line);
+  border-bottom-left-radius: 4px;
+}
+.user-bubble {
+  align-self: flex-end;
+  background: var(--teal);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+.chat-input-area {
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  border-top: 1px solid var(--line);
+}
+.chat-text-input {
+  display: flex;
+  gap: 10px;
+}
+.chat-text-input input, .chat-text-input textarea {
+  flex: 1;
+  resize: none;
+}
+.chat-options-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.chat-option-btn.selected {
+  background: var(--teal);
+  color: white;
+  border-color: var(--teal);
+}
+.chat-file-input {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}

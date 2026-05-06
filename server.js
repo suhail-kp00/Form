@@ -2,7 +2,7 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createForm, createResponse, deleteForm, closeForm, reopenForm, getFormById, getFormByPublicId, listForms, listResponses } from "./lib/database.js";
-import { renderDashboardPage, renderLandingPage, renderLoginPage, renderNotFoundPage, renderPublicFormPage } from "./lib/templates.js";
+import { renderDashboardPage, renderLandingPage, renderLoginPage, renderNotFoundPage, renderPublicFormPage, renderPublicBotPage } from "./lib/templates.js";
 import {
   buildXlsxBuffer,
   buildResponseTable,
@@ -114,9 +114,10 @@ function getOrigin(request) {
 }
 
 function attachShareLink(origin, form) {
+  const pathPrefix = form.isBot ? '/b/' : '/f/';
   return {
     ...form,
-    shareLink: `${origin}/f/${form.publicId}`
+    shareLink: `${origin}${pathPrefix}${form.publicId}`
   };
 }
 
@@ -320,6 +321,10 @@ const server = http.createServer(async (request, response) => {
       await sendStaticFile(response, path.join(publicDirectory, "form.js"));
       return;
     }
+    if (pathname === "/bot.js") {
+      await sendStaticFile(response, path.join(publicDirectory, "bot.js"));
+      return;
+    }
 
     // Serve uploaded images — public so they display in the form responses
     if (pathname.startsWith("/uploads/")) {
@@ -395,10 +400,23 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
+    // ---- Public student bot pages — no auth needed ----
+    const publicBotMatch = pathname.match(/^\/b\/([A-Za-z0-9-]+)$/);
+    if (publicBotMatch) {
+      const form = getFormByPublicId(publicBotMatch[1]);
+      if (!form || !form.isBot) {
+        sendHtml(response, 404, renderNotFoundPage());
+        return;
+      }
+      sendHtml(response, 200, renderPublicBotPage(site, publicBotMatch[1]));
+      return;
+    }
+
     // ---- Public student form pages — no auth needed ----
     const publicPageMatch = pathname.match(/^\/f\/([A-Za-z0-9-]+)$/);
     if (publicPageMatch) {
-      if (!getFormByPublicId(publicPageMatch[1])) {
+      const form = getFormByPublicId(publicPageMatch[1]);
+      if (!form || form.isBot) {
         sendHtml(response, 404, renderNotFoundPage());
         return;
       }

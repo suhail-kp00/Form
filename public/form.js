@@ -9,7 +9,9 @@ const typeHelp = {
   dropdown: "Choose from the list",
   date: "Select a date",
   number: "Enter a number",
-  email: "Enter an email address"
+  email: "Enter an email address",
+  phone: "Enter a 10-digit phone number starting with 6-9",
+  address: "Enter your full address"
 };
 
 async function apiFetch(url, options = {}) {
@@ -30,8 +32,8 @@ async function apiFetch(url, options = {}) {
 function renderField(question) {
   const requiredMark = question.required ? '<span class="required-mark">*</span>' : "";
 
-  if (question.type === "paragraph") {
-    return '<label class="field"><span>' + question.label + ' ' + requiredMark + '</span><textarea name="' + question.id + '" rows="4" ' + (question.required ? "required" : "") + '></textarea></label>';
+  if (question.type === "paragraph" || question.type === "address") {
+    return '<label class="field"><span>' + question.label + ' ' + requiredMark + '</span><textarea name="' + question.id + '" rows="' + (question.type === "address" ? "3" : "4") + '" ' + (question.required ? "required" : "") + '></textarea><small class="field-help">' + typeHelp[question.type] + '</small></label>';
   }
 
   if (question.type === "multiple_choice") {
@@ -76,7 +78,11 @@ function renderField(question) {
       `;
     }
 
-  return '<label class="field"><span>' + question.label + ' ' + requiredMark + '</span><input type="' + (question.type === "short_text" ? "text" : question.type) + '" name="' + question.id + '" ' + (question.required ? "required" : "") + ' /><small class="field-help">' + typeHelp[question.type] + '</small></label>';
+  let inputType = question.type;
+  if (question.type === "short_text") inputType = "text";
+  if (question.type === "phone") inputType = "tel";
+  
+  return '<label class="field"><span>' + question.label + ' ' + requiredMark + '</span><input type="' + inputType + '" name="' + question.id + '" ' + (question.required ? "required" : "") + ' /><small class="field-help">' + typeHelp[question.type] + '</small></label>';
 }
 
 function collectAnswers(form, questions) {

@@ -16,7 +16,13 @@ const refs = {
   responsesTableWrap: document.getElementById("responsesTableWrap"),
   totalFormsStat: document.getElementById("totalFormsStat"),
   totalResponsesStat: document.getElementById("totalResponsesStat"),
-  latestFormStat: document.getElementById("latestFormStat")
+  latestFormStat: document.getElementById("latestFormStat"),
+  builderFormBot: document.getElementById("builderFormBot"),
+  formTitleBot: document.getElementById("formTitleBot"),
+  formDescriptionBot: document.getElementById("formDescriptionBot"),
+  questionListBot: document.getElementById("questionListBot"),
+  addQuestionButtonBot: document.getElementById("addQuestionButtonBot"),
+  builderStatusBot: document.getElementById("builderStatusBot")
 };
 
 const typeLabels = {
@@ -28,6 +34,8 @@ const typeLabels = {
   date: "Date",
   number: "Number",
   email: "Email",
+  phone: "Phone Number",
+  address: "Address",
   image: "Image upload (JPG)"
 };
 
@@ -105,21 +113,21 @@ function createQuestionCard(question = {}) {
   return card;
 }
 
-function refreshQuestionNumbers() {
-  const cards = refs.questionList.querySelectorAll(".question-card");
+function refreshQuestionNumbers(listNode = refs.questionList) {
+  const cards = listNode.querySelectorAll(".question-card");
   cards.forEach((card, index) => {
     const number = card.querySelector(".question-number");
     number.textContent = `Question ${index + 1}`;
   });
 }
 
-function addQuestion(question) {
-  refs.questionList.appendChild(createQuestionCard(question));
-  refreshQuestionNumbers();
+function addQuestion(question, listNode = refs.questionList) {
+  listNode.appendChild(createQuestionCard(question));
+  refreshQuestionNumbers(listNode);
 }
 
-function collectQuestions() {
-  return [...refs.questionList.querySelectorAll(".question-card")].map((card) => {
+function collectQuestions(listNode = refs.questionList) {
+  return [...listNode.querySelectorAll(".question-card")].map((card) => {
     const optionsText = card.querySelector(".question-options")?.value || "";
     return {
       id: card.dataset.questionId,
@@ -134,8 +142,16 @@ function collectQuestions() {
 function resetBuilder() {
   refs.builderForm.reset();
   refs.questionList.innerHTML = "";
-  addQuestion({ label: "Student full name", type: "short_text", required: true });
+  addQuestion({ label: "Student full name", type: "short_text", required: true }, refs.questionList);
   setBuilderStatus("Add your questions and create the form.", "neutral");
+}
+
+function resetBuilderBot() {
+  refs.builderFormBot.reset();
+  refs.questionListBot.innerHTML = "";
+  addQuestion({ label: "Student full name", type: "short_text", required: true }, refs.questionListBot);
+  refs.builderStatusBot.textContent = "Add your questions and create the bot form.";
+  refs.builderStatusBot.dataset.tone = "neutral";
 }
 
 function updateStats() {
@@ -156,13 +172,14 @@ function renderFormsList() {
   refs.formsList.innerHTML = state.forms.map((form) => {
     const isActive = Number(form.id) === Number(state.selectedFormId);
     const closedBadge = form.closed ? '<span class="form-closed-badge">Closed</span>' : '<span class="form-open-badge">Open</span>';
+    const botBadge = form.isBot ? '<span class="form-bot-badge" style="background:var(--teal-soft);color:var(--teal);padding:3px 10px;border-radius:99px;font-size:0.7rem;margin-left:6px;font-weight:bold;text-transform:uppercase;">Bot Form</span>' : '';
     const toggleLabel = form.closed ? "Reopen Form" : "Stop Responses";
     const toggleAction = form.closed ? "reopen" : "close";
     return `
       <article class="form-card ${isActive ? "active" : ""} ${form.closed ? "form-card-closed" : ""}">
         <div class="form-card-top">
           <div>
-            <h4>${form.title} ${closedBadge}</h4>
+            <h4>${form.title} ${closedBadge} ${botBadge}</h4>
             <p>${form.responseCount} responses</p>
           </div>
           <button type="button" class="inline-button" data-action="view" data-form-id="${form.id}">View</button>
@@ -287,15 +304,53 @@ async function handleBuilderSubmit(event) {
   }
 }
 
+async function handleBuilderBotSubmit(event) {
+  event.preventDefault();
+  refs.builderStatusBot.textContent = "Creating bot form and generating link...";
+  refs.builderStatusBot.dataset.tone = "loading";
+
+  try {
+    const payload = {
+      title: refs.formTitleBot.value.trim(),
+      description: refs.formDescriptionBot.value.trim(),
+      questions: collectQuestions(refs.questionListBot),
+      isBot: true
+    };
+
+    const data = await apiFetch("/api/forms", { method: "POST", body: JSON.stringify(payload) });
+
+    await loadForms(data.form.id);
+    resetBuilderBot();
+    scrollToSection("responses");
+    refs.builderStatusBot.textContent = `Bot form created. Share this link: ${data.form.shareLink}`;
+    refs.builderStatusBot.dataset.tone = "success";
+  } catch (error) {
+    refs.builderStatusBot.textContent = error.message;
+    refs.builderStatusBot.dataset.tone = "error";
+  }
+}
+
 refs.addQuestionButton.addEventListener("click", () => {
-  addQuestion({ label: "", type: "short_text", required: false });
+  addQuestion({ label: "", type: "short_text", required: false }, refs.questionList);
+});
+
+refs.addQuestionButtonBot.addEventListener("click", () => {
+  addQuestion({ label: "", type: "short_text", required: false }, refs.questionListBot);
 });
 
 refs.questionList.addEventListener("click", (event) => {
   const action = event.target.dataset.action;
   if (action === "remove-question") {
     event.target.closest(".question-card").remove();
-    refreshQuestionNumbers();
+    refreshQuestionNumbers(refs.questionList);
+  }
+});
+
+refs.questionListBot.addEventListener("click", (event) => {
+  const action = event.target.dataset.action;
+  if (action === "remove-question") {
+    event.target.closest(".question-card").remove();
+    refreshQuestionNumbers(refs.questionListBot);
   }
 });
 
@@ -371,8 +426,10 @@ document.querySelectorAll(".sidebar-link").forEach((button) => {
 });
 
 refs.builderForm.addEventListener("submit", handleBuilderSubmit);
+refs.builderFormBot.addEventListener("submit", handleBuilderBotSubmit);
 
 resetBuilder();
+resetBuilderBot();
 loadForms().catch((error) => {
   setBuilderStatus(error.message, "error");
 });
